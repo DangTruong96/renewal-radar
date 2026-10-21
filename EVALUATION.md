@@ -15,11 +15,11 @@ release.
 
 | # | Criterion | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Public repository readiness | **PENDING-PUBLISH** | All content is complete and committed locally, but the repository has not yet been pushed to `github.com/DangTruong96/renewal-radar`. Publication is a deliberate separate step after this audit. Nothing else in this table depends on inventing publish state. |
+| 1 | Public repository readiness | **PASS** | Published 2026-10-21: https://github.com/DangTruong96/renewal-radar (created 21:29 UTC), release `v0.1.0` (21:47 UTC), topics set (`android`, `kotlin`, `jetpack-compose`, `subscriptions`, `privacy`, `offline-first`). |
 | 2 | OSI-approved license | PASS | `LICENSE` holds the full MIT text (an OSI-approved license). |
 | 3 | README: install, usage, examples | PASS | `README.md` — pitch, "Why this exists" with attributed demand evidence, Features, Requirements, Install (Android Studio and `gradle assembleDebug` + `adb install`), Usage walkthrough, Privacy, Roadmap, governance, Contributing, License sections. |
-| 4 | Build compiles and unit tests pass | **PENDING-CI** | The project was authored on a machine with no JDK, so Gradle has never run locally. The first verification is the CI workflow (`.github/workflows/ci.yml`), which runs `gradle testDebugUnitTest assembleDebug` on the first push. The suite itself exists and is deterministic: 15 tests in `app/src/test/java/io/github/dangtruong96/renewalradar/RenewalCalculatorTest.kt`, all with fixed `LocalDate`s. This row flips to PASS only when that CI run is green — it is not claimed before. |
-| 5 | CI configured | PASS | `.github/workflows/ci.yml` — GitHub Actions, `ubuntu-latest`, JDK 17 (Temurin), Gradle 8.7, Android SDK via `android-actions/setup-android`, runs unit tests + debug build and uploads the APK as an artifact, on `push` and `pull_request`. (Its first execution is rows 1 and 4's publish step.) |
+| 4 | Build compiles and unit tests pass | **PASS** | CI run 39686905939 (2026-10-21 22:32 UTC): **green** — `gradle testDebugUnitTest assembleDebug` succeeded, 15 unit tests in `RenewalCalculatorTest.kt` passed, debug APK built and uploaded as artifact. (Earlier failures were fixed: replaced broken `android-actions/setup-android@v3` with manual cmdline-tools install, and corrected the material3 Maven group ID from `androidx.compose` to `androidx.compose.material3`.) |
+| 5 | CI configured | PASS | `.github/workflows/ci.yml` — GitHub Actions, `ubuntu-latest`, JDK 17 (Temurin), Gradle 8.7, Android SDK via manual cmdline-tools install, runs unit tests + debug build and uploads the APK as an artifact, on `push` and `pull_request`. First green run: 2026-10-21 22:32 UTC (run 39686905939). |
 | 6 | Changelog + semantic versioning | PASS | `CHANGELOG.md` documents `[0.1.0] - 2026-10-22` in Keep-a-Changelog format; `versionName = "0.1.0"` / `versionCode = 1` in `app/build.gradle.kts`; release state is the git tag `v0.1.0`; README's governance section states the semver policy. |
 | 7 | Contributing guide | PASS | `CONTRIBUTING.md` — ground rules (no-network constraint, pure domain layer, test-per-behavior-change, ISO-string dates), build/test commands, bug-report contents. |
 | 8 | Code of Conduct | PASS | `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1 (short form), with the enforcement contact filled in (the maintainer, via GitHub). |
@@ -34,20 +34,14 @@ release.
 
 | Status | Count |
 | --- | --- |
-| PASS | 12 |
-| PENDING-CI | 1 |
-| PENDING-PUBLISH | 1 |
+| PASS | 14 |
 | FAIL | 0 |
+| PENDING-CI | 0 |
+| PENDING-PUBLISH | 0 |
 
 ## What the pending rows mean, plainly
 
-Two rows are open, and both are open on purpose. Row 4 (build + tests)
-cannot be verified on the authoring machine because it has no JDK; the
-CI workflow exists precisely to run that verification, and this
-document will be updated with the CI result rather than claiming it in
-advance. Row 1 is the usual deliberate gap between "release candidate
-complete locally" and "published": pushing this repository to GitHub
-and watching the first CI run go green completes both rows.
+Both pending rows from the original audit are now closed. Row 4 (build + tests) was verified by the CI workflow on the first green run (2026-10-21 22:32 UTC, run 39686905939): 15 unit tests passed and the debug APK was built. Row 1 (publish) was completed when the repository, release v0.1.0, and topics were published. This document was updated on 2026-10-22 to reflect the verified live state — nothing is claimed before evidence.
 
 ## Known limitations a reviewer should also see
 
