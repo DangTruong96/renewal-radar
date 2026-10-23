@@ -55,12 +55,32 @@ object RenewalCalculator {
         iso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
     /**
-     * The date that matters for reminders: a trial's end date while it is a
-     * trial, otherwise the next renewal computed from the anchor.
+     * True while a free trial is still running: flagged as a trial, with
+     * a trial end today or in the future. Once the end date has passed,
+     * the trial has converted to a paid plan — see [effectiveDate].
+     */
+    fun isTrialPending(subscription: Subscription, today: LocalDate): Boolean {
+        if (!subscription.isTrial) return false
+        val trialEnd = parseDate(subscription.trialEndDate) ?: return false
+        return !trialEnd.isBefore(today)
+    }
+
+    /**
+     * The date that matters for reminders: a pending trial's end date;
+     * for a trial that already ended, the next paid renewal stepped from
+     * the trial-end date (the first charge lands on that date, so it is
+     * the natural anchor); otherwise the next renewal computed from the
+     * anchor.
      */
     fun effectiveDate(subscription: Subscription, today: LocalDate): LocalDate? {
         if (subscription.isTrial) {
-            parseDate(subscription.trialEndDate)?.let { return it }
+            val trialEnd = parseDate(subscription.trialEndDate)
+            if (trialEnd != null) {
+                if (!trialEnd.isBefore(today)) return trialEnd
+                return nextRenewal(
+                    trialEnd, BillingCycle.fromName(subscription.cycle), today
+                )
+            }
         }
         val anchor = parseDate(subscription.anchorDate) ?: return null
         return nextRenewal(anchor, BillingCycle.fromName(subscription.cycle), today)

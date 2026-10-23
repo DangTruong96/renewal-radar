@@ -152,6 +152,7 @@ private fun SubscriptionRow(
     onClick: () -> Unit
 ) {
     val daysLeft = effectiveDate?.let { RenewalCalculator.daysUntil(it, today) }
+    val trialPending = RenewalCalculator.isTrialPending(subscription, today)
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -174,13 +175,13 @@ private fun SubscriptionRow(
                     .padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (subscription.isTrial) {
+                if (trialPending) {
                     AssistChip(onClick = onClick, label = { Text("Free trial") })
                 }
                 if (effectiveDate != null && daysLeft != null) {
                     val label = when {
-                        subscription.isTrial && daysLeft == 0L -> "Trial ends today"
-                        subscription.isTrial -> "Trial ends ${effectiveDate.format(DATE_FORMAT)}"
+                        trialPending && daysLeft == 0L -> "Trial ends today"
+                        trialPending -> "Trial ends ${effectiveDate.format(DATE_FORMAT)}"
                         daysLeft == 0L -> "Renews today"
                         daysLeft == 1L -> "Renews tomorrow"
                         else -> "Renews ${effectiveDate.format(DATE_FORMAT)}"

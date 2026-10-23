@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.LocalDate
 
 class RenewalViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,7 +34,10 @@ class RenewalViewModel(application: Application) : AndroidViewModel(application)
      */
     val monthlyTotalsByCurrency: StateFlow<Map<String, Long>> =
         repository.all.map { subs ->
-            subs.filter { !it.isTrial }
+            // Pending trials are not charging yet, so they stay out of
+            // the totals; trials whose end date has passed have converted
+            // to paid plans and DO count.
+            subs.filter { !RenewalCalculator.isTrialPending(it, LocalDate.now()) }
                 .groupBy { it.currency }
                 .mapValues { (_, items) ->
                     items.sumOf {

@@ -37,8 +37,11 @@ class ReminderWorker(
             val date = RenewalCalculator.effectiveDate(sub, today) ?: continue
             val days = RenewalCalculator.daysUntil(date, today)
             val price = Money.format(sub.amountMinor, sub.currency)
+            // A trial whose end date has passed has converted to paid;
+            // it gets renewal reminders like any other subscription.
+            val trialPending = RenewalCalculator.isTrialPending(sub, today)
             when {
-                sub.isTrial && days in TRIAL_REMINDER_DAYS -> {
+                trialPending && days in TRIAL_REMINDER_DAYS -> {
                     NotificationHelper.notify(
                         applicationContext,
                         sub.id.toInt(),
@@ -50,7 +53,7 @@ class ReminderWorker(
                         }
                     )
                 }
-                !sub.isTrial && days == sub.remindDaysBefore.toLong() -> {
+                !trialPending && days == sub.remindDaysBefore.toLong() -> {
                     NotificationHelper.notify(
                         applicationContext,
                         sub.id.toInt(),

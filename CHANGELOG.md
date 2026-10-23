@@ -3,6 +3,31 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.2] - 2026-10-23
+
+### Fixed
+
+- A free trial whose end date had passed was treated as a trial
+  forever: `RenewalCalculator.effectiveDate` kept returning the past
+  trial-end date, so the converted plan vanished from the upcoming
+  list, its row kept showing the stale "Trial ends …" date with a
+  negative day count, it never received renewal reminders, and its
+  cost never appeared in the dashboard totals. A trial that has ended
+  is now treated as what it is — a paid plan whose first charge landed
+  on the trial-end date: the effective date is the next renewal stepped
+  from that date, reminders and totals treat it as a normal
+  subscription, and the list shows its renewal date. New
+  `RenewalCalculator.isTrialPending` is the single source of truth for
+  "still trialling", used by the calculator, the reminder worker, the
+  home list and the totals.
+
+### Added
+
+- `TrialConversionTest` (7 tests): expired monthly/weekly trials roll
+  to the next paid renewal, a trial ending today still reports its end
+  date, converted trials appear in `upcoming`, and `isTrialPending`
+  boundary behaviour. The JVM suite is now 38 tests.
+
 ## [0.1.1] - 2026-10-23
 
 ### Fixed
