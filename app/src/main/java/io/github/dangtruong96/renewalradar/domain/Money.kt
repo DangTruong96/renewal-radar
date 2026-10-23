@@ -66,6 +66,13 @@ object Money {
         val major = BigDecimal(amountMinor).divide(BigDecimal(factor))
         val format = NumberFormat.getCurrencyInstance(locale)
         format.currency = currency
+        // setCurrency() alone does not reset the fraction digits the
+        // instance inherited from the locale's own currency, so a JPY
+        // amount in a US locale would render as "¥1,500.00". Pin the
+        // digits to the amount currency's real ones.
+        val digits = fractionDigits(currencyCode)
+        format.minimumFractionDigits = digits
+        format.maximumFractionDigits = digits
         return format.format(major)
     }
 }

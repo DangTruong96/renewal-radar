@@ -3,6 +3,26 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.1] - 2026-10-23
+
+### Fixed
+
+- `Money.format` could render zero-decimal currencies with spurious
+  decimals — e.g. a ¥1,500 plan shown as "¥1,500.00" in a US locale.
+  `NumberFormat.setCurrency()` does not reset the fraction digits the
+  formatter inherited from the locale's own currency, so the digits are
+  now pinned explicitly to the amount currency's real fraction digits.
+
+### Added
+
+- Unit tests for the `Money` domain object (16 tests), which previously
+  had no coverage — they caught the formatting bug above. Coverage:
+  currency fraction digits (including zero-decimal JPY/KRW/VND and the
+  unknown-code fallback), parsing to minor units (grouping commas,
+  whitespace, HALF_UP rounding, rejection of negative and malformed
+  input), plain-string rendering, parse/format round-trip, and
+  locale-pinned display formatting. The JVM suite is now 31 tests.
+
 ## [0.1.0] - 2026-10-22
 
 First public release. An offline subscription and free-trial renewal
