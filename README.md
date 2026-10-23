@@ -139,6 +139,21 @@ This is the section most subscription apps cannot honestly write:
 - **Export is user-initiated.** JSON leaves the phone only when you
   explicitly export and share it.
 
+## Known limitations
+
+- **A renewal reminder fires on exactly one day.** The daily worker
+  notifies when a renewal is exactly `remindDaysBefore` days away, so
+  if the phone is off (or the worker is deferred by the OS) on that
+  day, the reminder for that cycle is skipped rather than delivered
+  late. Fixing this properly means remembering that a cycle was
+  already reminded — a persisted "last reminded" marker per
+  subscription — instead of firing repeatedly on every day inside the
+  window. That is a deliberate design change (schema + worker), tracked
+  here rather than patched over.
+- **Trial reminders are the exception:** a pending trial notifies at
+  3, 1 and 0 days before it converts, so a missed day still leaves the
+  later countdown notifications.
+
 ## Roadmap
 
 - **v0.2** — notification deep link straight to the subscription's edit

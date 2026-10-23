@@ -32,9 +32,29 @@ object Money {
         2
     }
 
+    /**
+     * Disambiguate the comma in user-typed input. A comma is a decimal
+     * separator when it is the only comma, there is no dot, and it is
+     * followed by 1..[fractionDigits] digits ("12,99" EUR, "12,5" EUR):
+     * in decimal-comma locales that is what the keyboard produces, and
+     * stripping the comma as if it were a grouping separator silently
+     * multiplied the amount by 100. Otherwise commas are grouping
+     * separators and are stripped ("1,299" USD, "1,500" JPY).
+     */
+    private fun normalizeCommas(text: String, currencyCode: String): String {
+        val digits = fractionDigits(currencyCode)
+        if (digits == 0 || text.contains(".")) return text.replace(",", "")
+        val parts = text.split(",")
+        val isDecimalComma = parts.size == 2 &&
+            parts[0].isNotEmpty() && parts[0].all { it.isDigit() } &&
+            parts[1].length in 1..digits && parts[1].all { it.isDigit() }
+        return if (isDecimalComma) parts[0] + "." + parts[1]
+        else text.replace(",", "")
+    }
+
     /** "12.99" (USD) -> 1299; "1500" (JPY) -> 1500. Returns null on bad input. */
     fun parseToMinor(text: String, currencyCode: String): Long? {
-        val cleaned = text.trim().replace(",", "").replace(" ", "")
+        val cleaned = normalizeCommas(text.trim().replace(" ", ""), currencyCode)
         if (cleaned.isEmpty()) return null
         val major = cleaned.toBigDecimalOrNull() ?: return null
         if (major.signum() < 0) return null

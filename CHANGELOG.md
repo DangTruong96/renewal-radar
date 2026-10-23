@@ -3,6 +3,39 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.3] - 2026-10-23
+
+### Fixed
+
+- Amounts typed with a decimal comma were stored 100x too large.
+  The edit form feeds raw user text to `Money.parseToMinor`, which
+  stripped every comma as if it were a grouping separator — so
+  "12,99" (the natural format in decimal-comma locales, and what
+  decimal keyboards there produce) was saved as 1299.00 instead of
+  12.99. A single comma followed by 1-2 digits with no dot present
+  is now read as a decimal separator; grouping commas keep working
+  ("1,299" USD, "1,500" JPY), as does "1,299.50".
+
+### Added
+
+- `Round2MoneyTest` (5 tests): a locale x currency matrix proving
+  `Money.format` carries the exact value in US/UK/German/French/
+  Japanese locales, zero-decimal currencies never gain a fraction,
+  decimal-comma parsing, and overflow rejection.
+- `Round2DomainTest` (11 tests): `upcoming` window boundaries (an
+  item exactly at today + withinDays is in; one day past is out),
+  sort stability for equal dates, subscriptions with unparseable
+  stored dates mixed among valid ones, `BillingCycle.fromName`
+  fallback pinning, and `monthlyEquivalentMinor` rounding across all
+  cycles. The JVM suite is now 54 tests.
+
+### Documentation
+
+- The renewal reminder's exact-day behaviour (a reminder is skipped
+  if the device is off on the one matching day) is now documented
+  under "Known limitations" in the README, with the reason the fix
+  needs a persisted already-reminded marker.
+
 ## [0.1.2] - 2026-10-23
 
 ### Fixed

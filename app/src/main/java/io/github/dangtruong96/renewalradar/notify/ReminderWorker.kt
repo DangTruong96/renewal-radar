@@ -20,6 +20,11 @@ import java.util.concurrent.TimeUnit
  *  - a free trial ends in 3, 1, or 0 days (trials always get the countdown,
  *    because "cancel before it converts" is the whole point).
  *
+ * Known limitation: the exact-day rule means a renewal reminder is
+ * skipped (not delivered late) if the device is off on that one day —
+ * see "Known limitations" in the README for why the fix needs a
+ * persisted already-reminded marker rather than a wider window.
+ *
  * WorkManager persists the schedule across reboots by itself, so no
  * RECEIVE_BOOT_COMPLETED receiver is needed.
  */
