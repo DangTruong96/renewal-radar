@@ -3,6 +3,35 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.4] - 2026-11-02
+
+### Fixed
+
+- Grouped decimal-comma amounts were stored ~1000x too small.
+  `Money.parseToMinor` treated every dot as a decimal separator, so
+  "1.299,50" (the natural grouped format in dot-grouping locales)
+  was saved as €1.30 instead of €1,299.50. When both separators are
+  present, the last one is now the decimal separator ("1,299.50" US
+  grouping keeps working exactly as before).
+- Amounts grouped with a non-breaking space were rejected outright.
+  French-locale formatting groups thousands with U+00A0 (or narrow
+  U+202F), so a pasted or retyped French-formatted price failed with
+  a generic "valid price" error; both are now stripped as grouping
+  separators like a plain space.
+- Scientific-notation input could freeze the app. "1e100000000"
+  (12 characters, reachable by pasting into the price field) stalled
+  the caller for 30+ seconds while BigDecimal scaling materialised
+  a hundred-million-digit number — and the edit form parses on the
+  main thread, so that was an ANR. Price fields now accept plain
+  decimal notation only; "1e3" and huge exponents return null.
+
+### Added
+
+- `Round3MoneyTest` (4 tests): dot-grouped decimal-comma parsing
+  (including multi-group "1.299.500,50"), US grouped input
+  unchanged, NBSP/narrow-NBSP grouping, and scientific-notation
+  rejection. The JVM suite is now 58 tests.
+
 ## [0.1.3] - 2026-10-23
 
 ### Fixed

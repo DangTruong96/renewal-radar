@@ -40,9 +40,23 @@ object Money {
      * stripping the comma as if it were a grouping separator silently
      * multiplied the amount by 100. Otherwise commas are grouping
      * separators and are stripped ("1,299" USD, "1,500" JPY).
+     *
+     * When BOTH separators are present, the LAST one is the decimal
+     * separator: "1,299.50" (US grouping) versus "1.299,50" (German
+     * grouping). Treating every dot as decimal silently stored the
+     * German form ~1000x too small ("1.299,50" EUR became 130 minor
+     * instead of 129950) — the same silent-corruption class as the
+     * decimal-comma bug above, only with grouping dots.
      */
     private fun normalizeCommas(text: String, currencyCode: String): String {
         val digits = fractionDigits(currencyCode)
+        if (text.contains(".") && text.contains(",")) {
+            return if (text.lastIndexOf(",") > text.lastIndexOf(".")) {
+                text.replace(".", "").replace(",", ".")
+            } else {
+                text.replace(",", "")
+            }
+        }
         if (digits == 0 || text.contains(".")) return text.replace(",", "")
         val parts = text.split(",")
         val isDecimalComma = parts.size == 2 &&
@@ -52,10 +66,26 @@ object Money {
         else text.replace(",", "")
     }
 
-    /** "12.99" (USD) -> 1299; "1500" (JPY) -> 1500. Returns null on bad input. */
+    /**
+     * "12.99" (USD) -> 1299; "1500" (JPY) -> 1500. Returns null on bad input.
+     *
+     * Only plain decimal notation is accepted. Non-breaking spaces
+     * (U+00A0) and narrow non-breaking spaces (U+202F) are stripped as
+     * grouping separators — French-locale formatting groups with them,
+     * so a pasted or retyped French-formatted price was rejected
+     * outright. Scientific notation ("1e3") is rejected: it is never a
+     * typed price, and a huge exponent ("1e100000000") forced the
+     * BigDecimal scaling to grind for 30+ seconds on the calling
+     * thread (the edit form calls this on the main thread, so that
+     * was an ANR from a 12-character paste).
+     */
     fun parseToMinor(text: String, currencyCode: String): Long? {
-        val cleaned = normalizeCommas(text.trim().replace(" ", ""), currencyCode)
+        val cleaned = normalizeCommas(
+            text.trim().replace(" ", "").replace("\u00A0", "").replace("\u202F", ""),
+            currencyCode
+        )
         if (cleaned.isEmpty()) return null
+        if (cleaned.any { it == 'e' || it == 'E' }) return null
         val major = cleaned.toBigDecimalOrNull() ?: return null
         if (major.signum() < 0) return null
         return try {
