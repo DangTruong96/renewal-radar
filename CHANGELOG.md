@@ -3,6 +3,48 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.5] - 2026-11-14
+
+### Fixed
+
+- Trials now get their chosen lead-time reminder. The daily worker's
+  trial branch only ever fired the 3/1/0 countdown, so a trial with a
+  7- or 14-day lead got no reminder on its lead day at all — even
+  though the editor shows the 1/3/7/14 chips for trials and the README
+  calls the countdown "extra" reminders. A pending trial now notifies
+  on its lead day as well as at 3, 1, and 0 days before it converts
+  (a lead of 3 or 1 still produces exactly one notification that day).
+- Weekly plans with a 7- or 14-day lead never got any reminder. The
+  worker fired only when days-until-renewal exactly equalled the lead,
+  but a weekly plan's days-until is always 0..6, so 7 could never
+  match — a weekly subscription with a 14-day lead was silently
+  unreminded forever. A renewal now fires on the closest day the cycle
+  can actually reach (`min(lead, cycleLength - 1)`): for weekly + 7/14
+  days that is 6 days out, once per cycle. Leads the cycle can reach
+  still fire on exactly the lead day.
+- JSON import accepted entries that could never work. Any
+  structurally-parseable entry replaced the whole library, so a
+  garbage anchor date made a subscription invisible to reminders and
+  "Coming up" while its amount still counted in the dashboard totals,
+  a typo'd cycle (`YEARLYY`) silently fell back to MONTHLY (12x the
+  monthly total for a yearly plan), and a negative amount put negative
+  spend on the dashboard. Import now validates each entry (non-blank
+  name, non-negative amount, real ISO 4217 currency, known cycle,
+  parseable anchor/trial-end dates, non-negative lead) and rejects the
+  whole document — leaving the existing library untouched — on any bad
+  entry.
+
+### Added
+
+- `Round4ReminderTest` (25 tests): day-by-day simulations of the
+  reminder decision for trials and all four cycles, pinning the fixed
+  behaviour and that every previously-working lead/cycle combination
+  still fires on exactly its lead day; plus import-validation cases.
+  The reminder decision itself is now a pure function,
+  `RenewalCalculator.reminderDue`, which the worker calls — the tests
+  exercise the exact function that ships. The JVM suite is now
+  83 tests.
+
 ## [0.1.4] - 2026-11-02
 
 ### Fixed

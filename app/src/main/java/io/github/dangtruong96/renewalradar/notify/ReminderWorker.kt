@@ -13,12 +13,11 @@ import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 /**
- * Runs once a day, fully offline. For every subscription it computes the
- * effective date (trial end, or next renewal) and posts a notification when:
- *
- *  - a renewal is exactly `remindDaysBefore` days away, or
- *  - a free trial ends in 3, 1, or 0 days (trials always get the countdown,
- *    because "cancel before it converts" is the whole point).
+ * Runs once a day, fully offline. For every subscription it asks
+ * [RenewalCalculator.reminderDue] whether a notification is due today
+ * and posts it — the date math (trial countdown plus the chosen lead
+ * time, renewal lead clamped to the closest day the cycle can reach)
+ * lives in that pure function, so the worker only renders the message.
  *
  * Known limitation: the exact-day rule means a renewal reminder is
  * skipped (not delivered late) if the device is off on that one day —
@@ -39,14 +38,11 @@ class ReminderWorker(
         val subscriptions = dao.getAllOnce()
 
         for (sub in subscriptions) {
-            val date = RenewalCalculator.effectiveDate(sub, today) ?: continue
-            val days = RenewalCalculator.daysUntil(date, today)
+            val reminder = RenewalCalculator.reminderDue(sub, today) ?: continue
+            val days = reminder.days
             val price = Money.format(sub.amountMinor, sub.currency)
-            // A trial whose end date has passed has converted to paid;
-            // it gets renewal reminders like any other subscription.
-            val trialPending = RenewalCalculator.isTrialPending(sub, today)
-            when {
-                trialPending && days in TRIAL_REMINDER_DAYS -> {
+            when (reminder.kind) {
+                RenewalCalculator.ReminderKind.TRIAL -> {
                     NotificationHelper.notify(
                         applicationContext,
                         sub.id.toInt(),
@@ -58,7 +54,7 @@ class ReminderWorker(
                         }
                     )
                 }
-                !trialPending && days == sub.remindDaysBefore.toLong() -> {
+                RenewalCalculator.ReminderKind.RENEWAL -> {
                     NotificationHelper.notify(
                         applicationContext,
                         sub.id.toInt(),
@@ -73,7 +69,6 @@ class ReminderWorker(
 
     companion object {
         private const val WORK_NAME = "daily-renewal-check"
-        private val TRIAL_REMINDER_DAYS = setOf(3L, 1L, 0L)
 
         fun scheduleDaily(context: Context) {
             val request = PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS)

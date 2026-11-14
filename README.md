@@ -149,10 +149,14 @@ This is the section most subscription apps cannot honestly write:
   already reminded — a persisted "last reminded" marker per
   subscription — instead of firing repeatedly on every day inside the
   window. That is a deliberate design change (schema + worker), tracked
-  here rather than patched over.
+  here rather than patched over. One exception inside the rule: when
+  the lead time is longer than the cycle can reach (a weekly plan's
+  days-until-renewal never reaches 7, so a 7- or 14-day lead could
+  never fire at all), the reminder fires on the closest reachable day
+  instead — the day after the previous renewal.
 - **Trial reminders are the exception:** a pending trial notifies at
-  3, 1 and 0 days before it converts, so a missed day still leaves the
-  later countdown notifications.
+  3, 1 and 0 days before it converts, plus on its chosen lead day, so
+  a missed day still leaves the later countdown notifications.
 
 ## Roadmap
 

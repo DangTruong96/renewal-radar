@@ -104,4 +104,52 @@ object RenewalCalculator {
                 if (days in 0..withinDays) UpcomingItem(sub, date) else null
             }
         }.sortedBy { it.date }
+
+    /** Days before a pending trial ends at which it always notifies. */
+    val TRIAL_REMINDER_DAYS: Set<Long> = setOf(3L, 1L, 0L)
+
+    /** What kind of notification is due, if any. */
+    enum class ReminderKind { TRIAL, RENEWAL }
+
+    /** A notification due today: its kind, how many days out it is, and its date. */
+    data class ReminderDue(val kind: ReminderKind, val days: Long, val date: LocalDate)
+
+    /**
+     * The notification due for [subscription] on [today], if any. This is
+     * the whole reminder decision, kept pure so the daily worker and the
+     * tests agree on it — the worker only renders the message.
+     *
+     * Two cases where a naive "fire exactly `remindDaysBefore` days out"
+     * rule silently never fires, fixed here:
+     *
+     *  - Trials: the 3/1/0 countdown is *in addition to* the chosen lead
+     *    time, not instead of it. A trial with a 7- or 14-day lead used
+     *    to get no reminder on its lead day at all — the lead-time chips
+     *    in the editor are shown for trials, so the choice has to work.
+     *  - Short cycles: days-until-renewal for a weekly plan is always
+     *    0..6, so a 7- or 14-day lead could never match and the plan
+     *    got no reminder ever. The renewal fires on the closest day the
+     *    cycle can actually reach: `min(lead, cycleLength - 1)` — for a
+     *    weekly plan with a 7-day lead that is 6 days out, the day
+     *    after the previous renewal. Every lead the cycle can reach
+     *    fires on exactly the lead day, as before.
+     *
+     * At most one notification per subscription per day, and at most one
+     * per cycle for renewals: days-until takes each value once per cycle.
+     */
+    fun reminderDue(subscription: Subscription, today: LocalDate): ReminderDue? {
+        val date = effectiveDate(subscription, today) ?: return null
+        val days = daysUntil(date, today)
+        val lead = subscription.remindDaysBefore.toLong()
+        if (isTrialPending(subscription, today)) {
+            if (days in TRIAL_REMINDER_DAYS || days == lead) {
+                return ReminderDue(ReminderKind.TRIAL, days, date)
+            }
+            return null
+        }
+        val cycle = BillingCycle.fromName(subscription.cycle)
+        val cycleLengthDays = ChronoUnit.DAYS.between(cycle.previous(date), date)
+        val fireDay = lead.coerceAtMost(cycleLengthDays - 1)
+        return if (days == fireDay) ReminderDue(ReminderKind.RENEWAL, days, date) else null
+    }
 }

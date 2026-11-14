@@ -8,6 +8,7 @@ import io.github.dangtruong96.renewalradar.data.Subscription
 import io.github.dangtruong96.renewalradar.data.SubscriptionRepository
 import io.github.dangtruong96.renewalradar.domain.BillingCycle
 import io.github.dangtruong96.renewalradar.domain.RenewalCalculator
+import io.github.dangtruong96.renewalradar.domain.SubscriptionImport
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -108,6 +109,12 @@ class RenewalViewModel(application: Application) : AndroidViewModel(application)
         } catch (e: Exception) {
             return false
         }
+        // A structurally-parseable entry can still be nonsense (garbage
+        // anchor date, typo'd cycle, negative amount). Reject the whole
+        // document rather than wiping the library with entries that
+        // would be invisible to reminders and totals — see
+        // SubscriptionImport for what counts as well-formed.
+        if (items.any { !SubscriptionImport.isValid(it) }) return false
         viewModelScope.launch { repository.replaceAll(items) }
         return true
     }
