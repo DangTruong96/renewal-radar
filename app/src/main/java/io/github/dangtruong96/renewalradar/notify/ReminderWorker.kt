@@ -7,7 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import io.github.dangtruong96.renewalradar.data.AppDatabase
-import io.github.dangtruong96.renewalradar.domain.Money
+import io.github.dangtruong96.renewalradar.domain.ReminderMessage
 import io.github.dangtruong96.renewalradar.domain.RenewalCalculator
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
@@ -39,30 +39,10 @@ class ReminderWorker(
 
         for (sub in subscriptions) {
             val reminder = RenewalCalculator.reminderDue(sub, today) ?: continue
-            val days = reminder.days
-            val price = Money.format(sub.amountMinor, sub.currency)
-            when (reminder.kind) {
-                RenewalCalculator.ReminderKind.TRIAL -> {
-                    NotificationHelper.notify(
-                        applicationContext,
-                        sub.id.toInt(),
-                        "Free trial ending: ${sub.name}",
-                        when (days) {
-                            0L -> "${sub.name} converts to a paid plan TODAY at $price. Cancel now if you don't want it."
-                            1L -> "${sub.name} converts to a paid plan TOMORROW at $price."
-                            else -> "${sub.name} converts to a paid plan in $days days at $price."
-                        }
-                    )
-                }
-                RenewalCalculator.ReminderKind.RENEWAL -> {
-                    NotificationHelper.notify(
-                        applicationContext,
-                        sub.id.toInt(),
-                        "Renewal coming up: ${sub.name}",
-                        "${sub.name} renews in $days day(s) at $price. Still using it?"
-                    )
-                }
-            }
+            // The exact title/body live in ReminderMessage (pure, tested);
+            // the worker only hands them to the OS.
+            val (title, text) = ReminderMessage.render(sub, reminder)
+            NotificationHelper.notify(applicationContext, sub.id.toInt(), title, text)
         }
         return Result.success()
     }

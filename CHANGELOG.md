@@ -3,6 +3,41 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.6] - 2026-11-26
+
+### Fixed
+
+- Decimal-comma prices were still stored 100x too large through three
+  shapes of input the single-comma rule did not cover: a leading
+  decimal comma (",99" became €99.00 instead of €0.99), a signed
+  integer part ("+12,99" became €1,299 instead of €12.99), and grouped
+  thousands with a decimal comma ("1,299,50" became €12,995 instead
+  of €1,299.50). The decimal comma is now the last comma whenever it
+  is followed by 1..fractionDigits digits, whatever precedes it;
+  grouping ("1,299", "12,999") and the both-separators forms
+  ("1.299,50", "1,299.50") behave exactly as before.
+- A renewal with a 0-day lead fired its notification on the renewal
+  day itself but worded it "renews in 0 day(s)", as if the charge were
+  still in the future. It now reads "renews TODAY", matching the trial
+  branch, which already rendered day 0 as TODAY. (A 0-day lead only
+  comes from an imported backup — the editor offers 1/3/7/14 — but
+  import accepts any non-negative lead, so the wording has to be
+  right for it.)
+
+### Added
+
+- `Round5MoneyTest` (13 tests) and `Round5ReminderMessageTest`
+  (3 tests): the decimal-comma shapes above with grouping guards,
+  cross-locale formatting pins (JPY in a US locale, USD in a Japan
+  locale, 3-fraction-digit BHD, EUR in a German locale), a
+  `nextRenewal` property fuzz over 2,000 random anchor/today/cycle
+  triples plus leap-day and Jan-31 clamp pins, and the exact
+  notification title/body for trial and renewal reminders — the
+  message rendering is now a pure domain function,
+  `ReminderMessage.render`, which the worker calls, so the strings
+  the worker posts are the strings the tests assert. The JVM suite is
+  now 99 tests.
+
 ## [0.1.5] - 2026-11-14
 
 ### Fixed

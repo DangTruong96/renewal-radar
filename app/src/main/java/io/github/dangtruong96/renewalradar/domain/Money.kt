@@ -41,6 +41,15 @@ object Money {
      * multiplied the amount by 100. Otherwise commas are grouping
      * separators and are stripped ("1,299" USD, "1,500" JPY).
      *
+     * The decimal comma is the LAST comma, not necessarily the only one:
+     * "1,299,50" (grouped thousands + decimal comma) reads as 1299.50,
+     * and the integer part may be empty (",99" is 0.99) or carry a sign
+     * ("+12,99" is 12.99). The earlier code required exactly one comma
+     * with a non-empty all-digit integer part, so all three of those
+     * fell through to the grouping branch and were stored 100x too
+     * large — the same silent-corruption class as the decimal-comma bug
+     * above, only reached through a different shape of input.
+     *
      * When BOTH separators are present, the LAST one is the decimal
      * separator: "1,299.50" (US grouping) versus "1.299,50" (German
      * grouping). Treating every dot as decimal silently stored the
@@ -59,11 +68,28 @@ object Money {
         }
         if (digits == 0 || text.contains(".")) return text.replace(",", "")
         val parts = text.split(",")
-        val isDecimalComma = parts.size == 2 &&
-            parts[0].isNotEmpty() && parts[0].all { it.isDigit() } &&
-            parts[1].length in 1..digits && parts[1].all { it.isDigit() }
-        return if (isDecimalComma) parts[0] + "." + parts[1]
-        else text.replace(",", "")
+        if (parts.size < 2) return text
+        val fraction = parts.last()
+        if (fraction.length !in 1..digits || !fraction.all { it.isDigit() }) {
+            return text.replace(",", "")
+        }
+        val head = parts.dropLast(1)
+        val integer = when {
+            head.size == 1 -> {
+                val h = head[0]
+                when {
+                    h.isEmpty() -> "0"
+                    h == "+" || h == "-" -> h + "0"
+                    h.all { it.isDigit() } -> h
+                    (h[0] == '+' || h[0] == '-') && h.drop(1).all { it.isDigit() } -> h
+                    else -> return text.replace(",", "")
+                }
+            }
+            head.all { it.isNotEmpty() && it.all { c -> c.isDigit() } } ->
+                head.joinToString("")
+            else -> return text.replace(",", "")
+        }
+        return "$integer.$fraction"
     }
 
     /**
